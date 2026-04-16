@@ -1,0 +1,62 @@
+export component AppWindow inherits Window {
+    width: root.screen-width;
+    height: root.screen-height;
+
+    in-out property <length> screen-width: 750px;
+    in-out property <length> screen-height: 474px;
+    in-out property <length> panel-x: (root.width - root.panel-width) / 2;
+    in-out property <length> panel-y: (root.height - root.panel-height) / 2;
+    in-out property <bool> dragging;
+    in-out property <bool> panel-centered-x;
+    in-out property <bool> panel-centered-y;
+
+    private property <length> panel-width: 750px;
+    private property <length> panel-height: 474px;
+
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    resize-border-width: 0px;
+
+    for dash in 400: Rectangle {
+        visible: root.dragging;
+        x: root.width / 2 - self.width / 2;
+        y: dash * 18px;
+        width: root.panel-centered-x ? 4px : 2px;
+        height: 10px;
+        border-radius: 2px;
+        background: root.panel-centered-x ? #ffffffcc : #ffffff55;
+    }
+
+    for dash in 600: Rectangle {
+        visible: root.dragging && root.panel-centered-x;
+        x: dash * 18px;
+        y: root.height / 2 - self.height / 2;
+        width: 10px;
+        height: root.panel-centered-y ? 4px : 2px;
+        border-radius: 2px;
+        background: root.panel-centered-y ? #ffffffcc : #ffffff55;
+    }
+
+    panel := Rectangle {
+        x: root.panel-x;
+        y: root.panel-y;
+        width: root.panel-width;
+        height: root.panel-height;
+        background: #1e1e1ecc;
+        border-radius: 50px;
+
+        TouchArea {
+            width: 100%;
+            height: 64px;
+            mouse-cursor: MouseCursor.grab;
+        }
+
+        Text {
+            text: "Frameless Slint window";
+            color: white;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
