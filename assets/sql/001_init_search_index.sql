@@ -1,3 +1,5 @@
+-- И да это я попросил нейронку все закомментировать
+
 BEGIN;
 
 -- Normalized records from all searchable sources: apps, files, folders,
@@ -208,5 +210,3 @@ END;
 INSERT INTO search_entries_fts(search_entries_fts) VALUES ('rebuild');
 
 COMMIT;
-
--- И да это я попросил нейронку все закомментировать
