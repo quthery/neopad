@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use i_slint_backend_winit::winit::event::{ElementState, MouseButton, WindowEvent};
+use i_slint_backend_winit::winit::keyboard::{Key, NamedKey};
 use i_slint_backend_winit::{EventResult, WinitWindowAccessor};
 use slint::ComponentHandle;
 
@@ -105,14 +106,18 @@ fn install_panel_drag(app: &AppWindow) {
                     drag.cursor_x.set(f64::INFINITY);
                     drag.cursor_y.set(f64::INFINITY);
                 }
+                WindowEvent::KeyboardInput { event, .. }
+                    if event.state == ElementState::Pressed
+                        && matches!(event.logical_key.as_ref(), Key::Named(NamedKey::Escape)) =>
+                {
+                    quit_application();
+                    return EventResult::PreventDefault;
+                }
                 WindowEvent::MouseInput {
                     state: ElementState::Pressed,
                     ..
                 } if cursor_is_outside_panel(&app, &drag) => {
-                    if let Err(error) = slint::quit_event_loop() {
-                        eprintln!("failed to quit event loop: {error}");
-                    }
-
+                    quit_application();
                     return EventResult::PreventDefault;
                 }
                 WindowEvent::MouseInput {
@@ -153,6 +158,12 @@ fn install_panel_drag(app: &AppWindow) {
             EventResult::Propagate
         }
     });
+}
+
+fn quit_application() {
+    if let Err(error) = slint::quit_event_loop() {
+        eprintln!("failed to quit event loop: {error}");
+    }
 }
 
 fn cursor_is_in_drag_area(app: &AppWindow, drag: &DragState) -> bool {
