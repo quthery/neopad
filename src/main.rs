@@ -9,7 +9,11 @@ slint::include_modules!();
 
 const PANEL_WIDTH: f64 = 750.0;
 const PANEL_HEIGHT: f64 = 474.0;
-const DRAG_AREA_HEIGHT: f64 = 64.0;
+const DRAG_AREA_HEIGHT: f64 = 55.0;
+const SEARCH_FIELD_X: f64 = 14.0;
+const SEARCH_FIELD_WIDTH: f64 = 604.0;
+const SEARCH_FIELD_HEIGHT: f64 = 44.0;
+const SEARCH_FIELD_Y: f64 = (DRAG_AREA_HEIGHT - SEARCH_FIELD_HEIGHT) / 2.0;
 const SNAP_THRESHOLD: f64 = 18.0;
 
 struct ScreenGeometry {
@@ -30,7 +34,13 @@ struct DragState {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
+    slint::BackendSelector::new()
+        .backend_name("winit".into())
+        .renderer_name("skia".into())
+        .select()?;
+
     let app = AppWindow::new()?;
+    app.set_drag_area_height(DRAG_AREA_HEIGHT as f32);
 
     configure_overlay_window(&app);
     install_panel_drag(&app);
@@ -97,6 +107,16 @@ fn install_panel_drag(app: &AppWindow) {
                     drag.cursor_y.set(f64::INFINITY);
                 }
                 WindowEvent::MouseInput {
+                    state: ElementState::Pressed,
+                    ..
+                } if cursor_is_outside_panel(&app, &drag) => {
+                    if let Err(error) = slint::quit_event_loop() {
+                        eprintln!("failed to quit event loop: {error}");
+                    }
+
+                    return EventResult::PreventDefault;
+                }
+                WindowEvent::MouseInput {
                     button: MouseButton::Left,
                     state: ElementState::Pressed,
                     ..
@@ -142,12 +162,35 @@ fn cursor_is_in_drag_area(app: &AppWindow, drag: &DragState) -> bool {
     let panel_x = app.get_panel_x() as f64;
     let panel_y = app.get_panel_y() as f64;
 
+    let in_search_field = cursor_x >= panel_x + SEARCH_FIELD_X
+        && cursor_x <= panel_x + SEARCH_FIELD_X + SEARCH_FIELD_WIDTH
+        && cursor_y >= panel_y + SEARCH_FIELD_Y
+        && cursor_y <= panel_y + SEARCH_FIELD_Y + SEARCH_FIELD_HEIGHT;
+
     cursor_x.is_finite()
         && cursor_y.is_finite()
+        && !in_search_field
         && cursor_x >= panel_x
         && cursor_x <= panel_x + PANEL_WIDTH
         && cursor_y >= panel_y
         && cursor_y <= panel_y + DRAG_AREA_HEIGHT
+}
+
+fn cursor_is_outside_panel(app: &AppWindow, drag: &DragState) -> bool {
+    let cursor_x = drag.cursor_x.get();
+    let cursor_y = drag.cursor_y.get();
+
+    cursor_x.is_finite() && cursor_y.is_finite() && !cursor_is_in_panel(app, cursor_x, cursor_y)
+}
+
+fn cursor_is_in_panel(app: &AppWindow, cursor_x: f64, cursor_y: f64) -> bool {
+    let panel_x = app.get_panel_x() as f64;
+    let panel_y = app.get_panel_y() as f64;
+
+    cursor_x >= panel_x
+        && cursor_x <= panel_x + PANEL_WIDTH
+        && cursor_y >= panel_y
+        && cursor_y <= panel_y + PANEL_HEIGHT
 }
 
 fn set_panel_position(app: &AppWindow, _slint_window: &slint::Window, panel_x: f64, panel_y: f64) {

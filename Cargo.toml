@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-slint = "1.16.0"
+slint = { version = "1.16.0", features = ["renderer-skia"] }
 i-slint-backend-winit = "1.16.0"
 raw-window-handle = "0.6"
 
