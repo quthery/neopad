@@ -11,7 +11,7 @@ const PANEL_WIDTH: f64 = 750.0;
 const PANEL_HEIGHT: f64 = 474.0;
 const DRAG_AREA_HEIGHT: f64 = 55.0;
 const SEARCH_FIELD_X: f64 = 14.0;
-const SEARCH_FIELD_WIDTH: f64 = 604.0;
+const SEARCH_FIELD_WIDTH: f64 = 562.0;
 const SEARCH_FIELD_HEIGHT: f64 = 44.0;
 const SEARCH_FIELD_Y: f64 = (DRAG_AREA_HEIGHT - SEARCH_FIELD_HEIGHT) / 2.0;
 const SNAP_THRESHOLD: f64 = 18.0;
@@ -59,7 +59,6 @@ fn configure_overlay_window(app: &AppWindow) {
         app.set_panel_y(
             ((geometry.logical_size.height as f64 - PANEL_HEIGHT) / 2.0).max(0.0) as f32,
         );
-
         slint_window.set_position(geometry.position);
         slint_window.set_size(geometry.physical_size);
     } else {

@@ -1,0 +1,174 @@
+export component AppWindow inherits Window {
+    width: root.screen-width;
+    height: root.screen-height;
+
+    in-out property <length> screen-width: 750px;
+    in-out property <length> screen-height: 474px;
+    in-out property <length> panel-x: (root.width - root.panel-width) / 2;
+    in-out property <length> panel-y: (root.height - root.panel-height) / 2;
+    in-out property <bool> dragging;
+    in-out property <bool> panel-centered-x;
+    in-out property <bool> panel-centered-y;
+    in-out property <string> search-text;
+    in-out property <length> drag-area-height: 58px;
+
+    private property <length> panel-width: 750px;
+    private property <length> panel-height: 474px;
+    private property <length> search-field-x: 14px;
+    private property <length> search-field-width: 562px;
+    private property <length> search-field-height: 44px;
+    private property <length> search-field-padding: 12px;
+    private property <length> guide-step: 30px;
+    private property <length> guide-segment: 10px;
+
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    resize-border-width: 0px;
+    forward-focus: search-input;
+
+    init => {
+        search-input.focus();
+    }
+
+    for dash in 400: Rectangle {
+        x: root.width / 2 - root.panel-width / 2 - self.width / 2;
+        y: dash * root.guide-step;
+        opacity: root.dragging ? 1 : 0;
+        width: root.panel-centered-x ? 4px : 2px;
+        height: root.guide-segment;
+        border-radius: 2px;
+        background: root.panel-centered-x ? #ffffffcc : #ffffff55;
+
+        animate opacity { duration: 160ms; easing: ease-out; }
+        animate width { duration: 120ms; easing: ease-out; }
+        animate background { duration: 120ms; easing: ease-out; }
+    }
+
+    for dash in 400: Rectangle {
+        x: root.width / 2 + root.panel-width / 2 - self.width / 2;
+        y: dash * root.guide-step;
+        opacity: root.dragging ? 1 : 0;
+        width: root.panel-centered-x ? 4px : 2px;
+        height: root.guide-segment;
+        border-radius: 2px;
+        background: root.panel-centered-x ? #ffffffcc : #ffffff55;
+
+        animate opacity { duration: 160ms; easing: ease-out; }
+        animate width { duration: 120ms; easing: ease-out; }
+        animate background { duration: 120ms; easing: ease-out; }
+    }
+
+    for dash in 600: Rectangle {
+        x: dash * root.guide-step;
+        y: root.height / 2 - root.panel-height / 2 - self.height / 2;
+        opacity: root.dragging && root.panel-centered-x ? 1 : 0;
+        width: root.guide-segment;
+        height: root.panel-centered-y ? 4px : 2px;
+        border-radius: 2px;
+        background: root.panel-centered-y ? #ffffffcc : #ffffff55;
+
+        animate opacity { duration: 160ms; easing: ease-out; }
+        animate height { duration: 120ms; easing: ease-out; }
+        animate background { duration: 120ms; easing: ease-out; }
+    }
+
+    for dash in 600: Rectangle {
+        x: dash * root.guide-step;
+        y: root.height / 2 + root.panel-height / 2 - self.height / 2;
+        opacity: root.dragging && root.panel-centered-x ? 1 : 0;
+        width: root.guide-segment;
+        height: root.panel-centered-y ? 4px : 2px;
+        border-radius: 2px;
+        background: root.panel-centered-y ? #ffffffcc : #ffffff55;
+
+        animate opacity { duration: 160ms; easing: ease-out; }
+        animate height { duration: 120ms; easing: ease-out; }
+        animate background { duration: 120ms; easing: ease-out; }
+    }
+
+    panel := Rectangle {
+        x: root.panel-x;
+        y: root.panel-y;
+        width: root.panel-width;
+        height: root.panel-height;
+        background: #1c1c1eee;
+        border-width: 1px;
+        border-color: #ffffff14;
+        border-radius: 15px;
+        clip: true;
+
+        Rectangle {
+            width: 100%;
+            height: root.drag-area-height;
+            background: #242426cc;
+        }
+
+        Rectangle {
+            y: root.drag-area-height - self.height;
+            width: 100%;
+            height: 1px;
+            background: #ffffff12;
+        }
+
+        TouchArea {
+            width: root.search-field-x;
+            height: root.drag-area-height;
+            mouse-cursor: MouseCursor.grab;
+        }
+
+        TouchArea {
+            x: root.search-field-x + root.search-field-width;
+            width: parent.width - self.x;
+            height: root.drag-area-height;
+            mouse-cursor: MouseCursor.grab;
+        }
+
+        Rectangle {
+            x: root.search-field-x;
+            y: (root.drag-area-height - root.search-field-height) / 2;
+            width: root.search-field-width;
+            height: root.search-field-height;
+            background: transparent;
+            clip: true;
+
+            Text {
+                visible: root.search-text == "";
+                x: root.search-field-padding;
+                width: parent.width - root.search-field-padding * 2;
+                height: 100%;
+                text: "Search an apps and other things...";
+                color: #ffffff80;
+                font-size: 17px;
+                font-weight: 500;
+                horizontal-alignment: left;
+                vertical-alignment: center;
+            }
+
+            search-input := TextInput {
+                x: root.search-field-padding;
+                width: parent.width - root.search-field-padding * 2;
+                height: 100%;
+                text <=> root.search-text;
+                color: #fffffff2;
+                font-size: 17px; 
+                font-weight: 500;
+                single-line: true;
+                text-cursor-width: 2px;
+                horizontal-alignment: left;
+                vertical-alignment: center;
+                selection-background-color: #ff63634d;
+                selection-foreground-color: #ffffff;
+            }
+        }
+
+        Text {
+            y: root.drag-area-height;
+            height: parent.height - root.drag-area-height;
+            text: "Frameless Slint window";
+            color: #ffffffd9;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
