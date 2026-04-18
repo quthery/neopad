@@ -12,5 +12,8 @@ raw-window-handle = "0.6"
 objc2 = "0.6.4"
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["NSScreen"] }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.60.2", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }
+
 [build-dependencies]
 slint-build = "1.16.0"

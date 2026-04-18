@@ -1,23 +1,248 @@
+import "../../assets/font/Inter-VariableFont_opsz,wght.ttf";
+
+component KeyCap inherits Rectangle {
+    in property <string> label;
+    in property <length> key-width: text.preferred-width + 14px;
+
+    width: key-width;
+    height: 22px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: #ffffff18;
+    background: #ffffff1f;
+
+    text := Text {
+        width: 100%;
+        height: 100%;
+        text: label;
+        color: #f2f2f299;
+        font-size: 13px;
+        font-weight: 510;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component SectionHeader inherits Rectangle {
+    in property <string> title;
+    in property <string> count;
+
+    width: 160px;
+    height: 22px;
+    background: transparent;
+
+    title-label := Text {
+        x: 0px;
+        width: self.preferred-width;
+        height: 100%;
+        text: title;
+        color: #f2f2f2cc;
+        font-size: 13px;
+        font-weight: 590;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+    }
+
+    Text {
+        x: title-label.preferred-width + 18px;
+        width: self.preferred-width;
+        height: 100%;
+        text: count;
+        color: #f2f2f280;
+        font-size: 13px;
+        font-weight: 510;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+    }
+}
+
+component CommandIcon inherits Rectangle {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: #ffffff24;
+    background: #ffffff2b;
+
+    Path {
+        x: 5px;
+        y: 5px;
+        width: 10px;
+        height: 10px;
+        commands: "M 1 1 L 9 1 L 9 9 L 1 9 Z M 3 3 L 7 7";
+        stroke: #f2f2f2cc;
+        stroke-width: 1.4px;
+        fill: transparent;
+    }
+}
+
+component RaycastMark inherits Rectangle {
+    width: 18px;
+    height: 18px;
+    background: transparent;
+
+    Path {
+        width: 18px;
+        height: 18px;
+        commands: "M 1 5 L 5 1 L 17 13 L 13 17 Z";
+        fill: #f2f2f280;
+    }
+
+    Path {
+        x: 1px;
+        y: 8px;
+        width: 12px;
+        height: 9px;
+        commands: "M 0 0 L 9 9 L 12 6 L 3 -3 Z";
+        fill: #181818d0;
+    }
+}
+
+component ListRow inherits Rectangle {
+    in property <string> title;
+    in property <string> subtitle;
+    in property <string> kind;
+    in property <bool> selected;
+
+    height: 48px;
+    border-radius: 6px;
+    background: selected ? #ffffff1a : (hover.has-hover ? #ffffff0d : transparent);
+
+    CommandIcon {
+        x: 10px;
+        y: 14px;
+    }
+
+    Text {
+        x: 40px;
+        width: 180px;
+        height: 100%;
+        text: title;
+        color: #f2f2f2f2;
+        font-size: 14px;
+        font-weight: 510;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    Text {
+        x: 225px;
+        width: parent.width - 355px;
+        height: 100%;
+        text: subtitle;
+        color: #f2f2f299;
+        font-size: 14px;
+        font-weight: 450;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    Text {
+        x: parent.width - self.width - 10px;
+        width: self.preferred-width;
+        height: 100%;
+        text: kind;
+        color: #f2f2f280;
+        font-size: 14px;
+        font-weight: 450;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+
+    hover := TouchArea {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+component BottomBar inherits Rectangle {
+    height: 42px;
+    background: #101010e6;
+
+    Rectangle {
+        width: 445px;
+        height: 1px;
+        background: @linear-gradient(90deg, #ffffff26 0%, #ffffff0f 70%, transparent 100%);
+    }
+
+    RaycastMark {
+        x: 15px;
+        y: 12px;
+    }
+
+    Text {
+        x: 493px;
+        width: 101px;
+        height: 100%;
+        text: "Open Command";
+        color: #f2f2f2f2;
+        font-size: 13px;
+        font-weight: 590;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+
+    KeyCap {
+        x: 602px;
+        y: 10px;
+        key-width: 24px;
+        label: "↵";
+    }
+
+    Rectangle {
+        x: 640px;
+        y: 15px;
+        width: 1px;
+        height: 12px;
+        background: #ffffff33;
+    }
+
+    Text {
+        x: 653px;
+        width: 48px;
+        height: 100%;
+        text: "Actions";
+        color: #f2f2f299;
+        font-size: 13px;
+        font-weight: 590;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+    }
+
+    KeyCap {
+        x: 712px;
+        y: 10px;
+        key-width: 24px;
+        label: "⌘";
+    }
+
+    KeyCap {
+        x: 738px;
+        y: 10px;
+        key-width: 24px;
+        label: "K";
+    }
+}
+
 export component AppWindow inherits Window {
     width: root.screen-width;
     height: root.screen-height;
+    default-font-family: "Inter";
 
-    in-out property <length> screen-width: 750px;
-    in-out property <length> screen-height: 474px;
+    in-out property <length> screen-width: 774px;
+    in-out property <length> screen-height: 340px;
     in-out property <length> panel-x: (root.width - root.panel-width) / 2;
     in-out property <length> panel-y: (root.height - root.panel-height) / 2;
     in-out property <bool> dragging;
     in-out property <bool> panel-centered-x;
     in-out property <bool> panel-centered-y;
     in-out property <string> search-text;
-    in-out property <length> drag-area-height: 58px;
+    in-out property <length> drag-area-height: 60px;
 
-    private property <length> panel-width: 750px;
-    private property <length> panel-height: 474px;
-    private property <length> search-field-x: 14px;
-    private property <length> search-field-width: 562px;
-    private property <length> search-field-height: 44px;
-    private property <length> search-field-padding: 12px;
+    private property <length> panel-width: 774px;
+    private property <length> panel-height: 340px;
     private property <length> guide-step: 30px;
     private property <length> guide-segment: 10px;
 
@@ -38,7 +263,7 @@ export component AppWindow inherits Window {
         width: root.panel-centered-x ? 4px : 2px;
         height: root.guide-segment;
         border-radius: 2px;
-        background: root.panel-centered-x ? #ffffffcc : #ffffff55;
+        background: root.panel-centered-x ? #ff5c00cc : #ffffff45;
 
         animate opacity { duration: 160ms; easing: ease-out; }
         animate width { duration: 120ms; easing: ease-out; }
@@ -52,7 +277,7 @@ export component AppWindow inherits Window {
         width: root.panel-centered-x ? 4px : 2px;
         height: root.guide-segment;
         border-radius: 2px;
-        background: root.panel-centered-x ? #ffffffcc : #ffffff55;
+        background: root.panel-centered-x ? #ff5c00cc : #ffffff45;
 
         animate opacity { duration: 160ms; easing: ease-out; }
         animate width { duration: 120ms; easing: ease-out; }
@@ -66,7 +291,7 @@ export component AppWindow inherits Window {
         width: root.guide-segment;
         height: root.panel-centered-y ? 4px : 2px;
         border-radius: 2px;
-        background: root.panel-centered-y ? #ffffffcc : #ffffff55;
+        background: root.panel-centered-y ? #ff5c00cc : #ffffff45;
 
         animate opacity { duration: 160ms; easing: ease-out; }
         animate height { duration: 120ms; easing: ease-out; }
@@ -80,7 +305,7 @@ export component AppWindow inherits Window {
         width: root.guide-segment;
         height: root.panel-centered-y ? 4px : 2px;
         border-radius: 2px;
-        background: root.panel-centered-y ? #ffffffcc : #ffffff55;
+        background: root.panel-centered-y ? #ff5c00cc : #ffffff45;
 
         animate opacity { duration: 160ms; easing: ease-out; }
         animate height { duration: 120ms; easing: ease-out; }
@@ -92,83 +317,131 @@ export component AppWindow inherits Window {
         y: root.panel-y;
         width: root.panel-width;
         height: root.panel-height;
-        background: #1c1c1eee;
+        border-radius: 10px;
         border-width: 1px;
-        border-color: #ffffff14;
-        border-radius: 15px;
+        border-color: #ffffff24;
+        background: #181818c8;
         clip: true;
+        drop-shadow-blur: 0px;
+        drop-shadow-color: transparent;
 
         Rectangle {
-            width: 100%;
-            height: root.drag-area-height;
-            background: #242426cc;
-        }
-
-        Rectangle {
-            y: root.drag-area-height - self.height;
-            width: 100%;
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
             height: 1px;
-            background: #ffffff12;
-        }
-
-        TouchArea {
-            width: root.search-field-x;
-            height: root.drag-area-height;
-            mouse-cursor: MouseCursor.grab;
-        }
-
-        TouchArea {
-            x: root.search-field-x + root.search-field-width;
-            width: parent.width - self.x;
-            height: root.drag-area-height;
-            mouse-cursor: MouseCursor.grab;
-        }
-
-        Rectangle {
-            x: root.search-field-x;
-            y: (root.drag-area-height - root.search-field-height) / 2;
-            width: root.search-field-width;
-            height: root.search-field-height;
-            background: transparent;
-            clip: true;
-
-            Text {
-                visible: root.search-text == "";
-                x: root.search-field-padding;
-                width: parent.width - root.search-field-padding * 2;
-                height: 100%;
-                text: "Search an apps and other things...";
-                color: #ffffff80;
-                font-size: 17px;
-                font-weight: 500;
-                horizontal-alignment: left;
-                vertical-alignment: center;
-            }
-
-            search-input := TextInput {
-                x: root.search-field-padding;
-                width: parent.width - root.search-field-padding * 2;
-                height: 100%;
-                text <=> root.search-text;
-                color: #fffffff2;
-                font-size: 17px; 
-                font-weight: 500;
-                single-line: true;
-                text-cursor-width: 2px;
-                horizontal-alignment: left;
-                vertical-alignment: center;
-                selection-background-color: #ff63634d;
-                selection-foreground-color: #ffffff;
-            }
+            background: @linear-gradient(90deg, transparent 0%, #ffffff35 18%, #ffffff1f 82%, transparent 100%);
         }
 
         Text {
-            y: root.drag-area-height;
-            height: parent.height - root.drag-area-height;
-            text: "Frameless Slint window";
-            color: #ffffffd9;
-            horizontal-alignment: center;
+            visible: root.search-text == "";
+            x: 16px;
+            y: 15px;
+            width: 520px;
+            height: 32px;
+            text: "Search for apps and commands...";
+            color: #f2f2f280;
+            font-size: 18px;
+            font-weight: 510;
+            horizontal-alignment: left;
             vertical-alignment: center;
+            overflow: elide;
+        }
+
+        search-input := TextInput {
+            x: 16px;
+            y: 11px;
+            width: 540px;
+            height: 40px;
+            text <=> root.search-text;
+            color: #f2f2f2f2;
+            font-size: 18px;
+            font-weight: 510;
+            single-line: true;
+            horizontal-alignment: left;
+            vertical-alignment: center;
+            text-cursor-width: 2px;
+            selection-background-color: #ffffff33;
+            selection-foreground-color: #ffffff;
+        }
+
+        Text {
+            x: parent.width - 102px;
+            y: 18px;
+            width: 50px;
+            height: 24px;
+            text: "Ask AI";
+            color: #f2f2f280;
+            font-size: 15px;
+            font-weight: 510;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+        }
+
+        KeyCap {
+            x: parent.width - 49px;
+            y: 17px;
+            key-width: 35px;
+            label: "Tab";
+        }
+
+        Rectangle {
+            y: 59px;
+            width: 100%;
+            height: 1px;
+            background: @linear-gradient(90deg, #ffffff24 0%, #ffffff14 67%, transparent 100%);
+        }
+
+        SectionHeader {
+            x: 16px;
+            y: 73px;
+            title: "List";
+            count: "2 items";
+        }
+
+        ListRow {
+            x: 8px;
+            y: 100px;
+            width: parent.width - 16px;
+            title: "Toggle System Appearance";
+            subtitle: "System";
+            kind: "Command";
+            selected: true;
+        }
+
+        ListRow {
+            x: 8px;
+            y: 148px;
+            width: parent.width - 16px;
+            title: "Toggle System Appearance";
+            subtitle: "System";
+            kind: "Command";
+            selected: false;
+        }
+
+        ListRow {
+            x: 8px;
+            y: 196px;
+            width: parent.width - 16px;
+            title: "Create Quick Note";
+            subtitle: "Notes";
+            kind: "Command";
+            selected: false;
+        }
+
+        ListRow {
+            x: 8px;
+            y: 244px;
+            width: parent.width - 16px;
+            title: "Open Calendar";
+            subtitle: "Productivity";
+            kind: "Command";
+            selected: false;
+        }
+
+        BottomBar {
+            y: parent.height - 42px;
+            width: 100%;
         }
     }
 }

@@ -2492,6 +2492,7 @@ dependencies = [
  "raw-window-handle",
  "slint",
  "slint-build",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]

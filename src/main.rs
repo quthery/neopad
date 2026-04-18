@@ -8,12 +8,12 @@ use slint::ComponentHandle;
 
 slint::include_modules!();
 
-const PANEL_WIDTH: f64 = 750.0;
-const PANEL_HEIGHT: f64 = 474.0;
-const DRAG_AREA_HEIGHT: f64 = 55.0;
-const SEARCH_FIELD_X: f64 = 14.0;
-const SEARCH_FIELD_WIDTH: f64 = 562.0;
-const SEARCH_FIELD_HEIGHT: f64 = 44.0;
+const PANEL_WIDTH: f64 = 774.0;
+const PANEL_HEIGHT: f64 = 340.0;
+const DRAG_AREA_HEIGHT: f64 = 60.0;
+const SEARCH_FIELD_X: f64 = 16.0;
+const SEARCH_FIELD_WIDTH: f64 = 540.0;
+const SEARCH_FIELD_HEIGHT: f64 = 40.0;
 const SEARCH_FIELD_Y: f64 = (DRAG_AREA_HEIGHT - SEARCH_FIELD_HEIGHT) / 2.0;
 const SNAP_THRESHOLD: f64 = 18.0;
 
@@ -43,28 +43,69 @@ fn main() -> Result<(), slint::PlatformError> {
     let app = AppWindow::new()?;
     app.set_drag_area_height(DRAG_AREA_HEIGHT as f32);
 
-    configure_overlay_window(&app);
+    configure_initial_overlay_window(&app);
     install_panel_drag(&app);
 
     app.show()?;
+    configure_overlay_window(&app);
     slint::run_event_loop()
+}
+
+fn configure_initial_overlay_window(app: &AppWindow) {
+    if let Some(geometry) = platform_screen_geometry() {
+        apply_screen_geometry(app, &geometry);
+    }
 }
 
 fn configure_overlay_window(app: &AppWindow) {
     let slint_window = app.window();
+    configure_window_effects(&slint_window);
 
-    if let Some(geometry) = platform_screen_geometry() {
-        app.set_screen_width(geometry.logical_size.width);
-        app.set_screen_height(geometry.logical_size.height);
-        app.set_panel_x(((geometry.logical_size.width as f64 - PANEL_WIDTH) / 2.0).max(0.0) as f32);
-        app.set_panel_y(
-            ((geometry.logical_size.height as f64 - PANEL_HEIGHT) / 2.0).max(0.0) as f32,
-        );
-        slint_window.set_position(geometry.position);
-        slint_window.set_size(geometry.physical_size);
+    if let Some(geometry) =
+        platform_screen_geometry().or_else(|| winit_screen_geometry(&slint_window))
+    {
+        apply_screen_geometry(app, &geometry);
     } else {
         slint_window.set_fullscreen(true);
     }
+}
+
+fn apply_screen_geometry(app: &AppWindow, geometry: &ScreenGeometry) {
+    let slint_window = app.window();
+
+    app.set_screen_width(geometry.logical_size.width);
+    app.set_screen_height(geometry.logical_size.height);
+    app.set_panel_x(((geometry.logical_size.width as f64 - PANEL_WIDTH) / 2.0).max(0.0) as f32);
+    app.set_panel_y(((geometry.logical_size.height as f64 - PANEL_HEIGHT) / 2.0).max(0.0) as f32);
+    slint_window.set_position(geometry.position);
+    slint_window.set_size(geometry.physical_size);
+}
+
+fn winit_screen_geometry(slint_window: &slint::Window) -> Option<ScreenGeometry> {
+    slint_window
+        .with_winit_window(|window| {
+            let monitor = window.current_monitor()?;
+            let position = monitor.position();
+            let physical_size = monitor.size();
+            let scale_factor = monitor.scale_factor();
+
+            Some(ScreenGeometry {
+                position: slint::PhysicalPosition::new(position.x, position.y),
+                physical_size: slint::PhysicalSize::new(physical_size.width, physical_size.height),
+                logical_size: slint::LogicalSize::new(
+                    (physical_size.width as f64 / scale_factor) as f32,
+                    (physical_size.height as f64 / scale_factor) as f32,
+                ),
+            })
+        })
+        .flatten()
+}
+
+fn configure_window_effects(slint_window: &slint::Window) {
+    slint_window.with_winit_window(|window| {
+        window.set_transparent(true);
+        apply_platform_window_effects(window);
+    });
 }
 
 fn install_panel_drag(app: &AppWindow) {
@@ -256,3 +297,34 @@ fn platform_screen_geometry() -> Option<ScreenGeometry> {
 fn platform_screen_geometry() -> Option<ScreenGeometry> {
     None
 }
+
+#[cfg(target_os = "windows")]
+fn apply_platform_window_effects(window: &i_slint_backend_winit::winit::window::Window) {
+    use i_slint_backend_winit::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    use windows_sys::Win32::Graphics::Dwm::{
+        DWMSBT_TRANSIENTWINDOW, DWMWA_SYSTEMBACKDROP_TYPE, DwmSetWindowAttribute,
+    };
+
+    let Ok(handle) = window.window_handle() else {
+        return;
+    };
+
+    let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+        return;
+    };
+
+    let hwnd = handle.hwnd.get() as isize as windows_sys::Win32::Foundation::HWND;
+    let backdrop = DWMSBT_TRANSIENTWINDOW;
+
+    unsafe {
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_SYSTEMBACKDROP_TYPE as u32,
+            &backdrop as *const _ as *const core::ffi::c_void,
+            std::mem::size_of_val(&backdrop) as u32,
+        );
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn apply_platform_window_effects(_window: &i_slint_backend_winit::winit::window::Window) {}
