@@ -44,6 +44,7 @@ fn main() -> Result<(), slint::PlatformError> {
     app.set_drag_area_height(DRAG_AREA_HEIGHT as f32);
 
     configure_initial_overlay_window(&app);
+    configure_window_effects(&app.window());
     install_panel_drag(&app);
 
     app.show()?;
@@ -298,12 +299,105 @@ fn platform_screen_geometry() -> Option<ScreenGeometry> {
     None
 }
 
+#[cfg(target_os = "macos")]
+fn apply_platform_window_effects(window: &i_slint_backend_winit::winit::window::Window) {
+    use i_slint_backend_winit::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    use objc2::{ClassType, MainThreadMarker};
+    use objc2_app_kit::{
+        NSAppearance, NSAppearanceCustomization, NSAppearanceNameVibrantDark,
+        NSAutoresizingMaskOptions, NSColor, NSView, NSVisualEffectBlendingMode,
+        NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView,
+    };
+
+    let Some(main_thread) = MainThreadMarker::new() else {
+        return;
+    };
+
+    let Ok(handle) = window.window_handle() else {
+        return;
+    };
+
+    let RawWindowHandle::AppKit(handle) = handle.as_raw() else {
+        return;
+    };
+
+    let slint_view = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
+    let Some(ns_window) = slint_view.window() else {
+        return;
+    };
+    let Some(content_view) = ns_window.contentView() else {
+        return;
+    };
+
+    ns_window.setOpaque(false);
+    ns_window.setBackgroundColor(Some(&NSColor::clearColor()));
+
+    if !std::ptr::eq(content_view.as_ref(), slint_view) {
+        return;
+    }
+
+    let bounds = slint_view.bounds();
+    let resize_mask =
+        NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable;
+    let effect_view = NSVisualEffectView::initWithFrame(main_thread.alloc(), bounds);
+    effect_view.setMaterial(NSVisualEffectMaterial::Popover);
+    effect_view.setBlendingMode(NSVisualEffectBlendingMode::BehindWindow);
+    effect_view.setState(NSVisualEffectState::Active);
+    effect_view.setAutoresizingMask(resize_mask);
+
+    if let Some(appearance) = NSAppearance::appearanceNamed(unsafe { NSAppearanceNameVibrantDark })
+    {
+        effect_view.setAppearance(Some(&appearance));
+    }
+
+    slint_view.setFrame(bounds);
+    slint_view.setAutoresizingMask(resize_mask);
+    effect_view.addSubview(slint_view);
+    ns_window.setContentView(Some(effect_view.as_super()));
+}
+
+#[cfg(target_os = "linux")]
+fn apply_platform_window_effects(window: &i_slint_backend_winit::winit::window::Window) {
+    use i_slint_backend_winit::winit::raw_window_handle::{
+        HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle,
+    };
+
+    let Ok(window_handle) = window.window_handle() else {
+        return;
+    };
+    let Ok(display_handle) = window.display_handle() else {
+        return;
+    };
+
+    match (display_handle.as_raw(), window_handle.as_raw()) {
+        (RawDisplayHandle::Xlib(display), RawWindowHandle::Xlib(window)) => {
+            let Some(display) = display.display else {
+                return;
+            };
+            unsafe {
+                apply_xlib_blur(display.as_ptr(), window.window);
+            }
+        }
+        (RawDisplayHandle::Xcb(display), RawWindowHandle::Xcb(window)) => {
+            let Some(connection) = display.connection else {
+                return;
+            };
+            unsafe {
+                apply_xcb_blur(connection.as_ptr(), window.window.get());
+            }
+        }
+        _ => {}
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn apply_platform_window_effects(window: &i_slint_backend_winit::winit::window::Window) {
     use i_slint_backend_winit::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
     use windows_sys::Win32::Graphics::Dwm::{
-        DWMSBT_TRANSIENTWINDOW, DWMWA_SYSTEMBACKDROP_TYPE, DwmSetWindowAttribute,
+        DWMSBT_TRANSIENTWINDOW, DWMWA_SYSTEMBACKDROP_TYPE, DWMWA_USE_IMMERSIVE_DARK_MODE,
+        DwmExtendFrameIntoClientArea, DwmSetWindowAttribute,
     };
+    use windows_sys::Win32::UI::Controls::MARGINS;
 
     let Ok(handle) = window.window_handle() else {
         return;
@@ -315,8 +409,22 @@ fn apply_platform_window_effects(window: &i_slint_backend_winit::winit::window::
 
     let hwnd = handle.hwnd.get() as isize as windows_sys::Win32::Foundation::HWND;
     let backdrop = DWMSBT_TRANSIENTWINDOW;
+    let dark_mode = 1_i32;
+    let margins = MARGINS {
+        cxLeftWidth: -1,
+        cxRightWidth: -1,
+        cyTopHeight: -1,
+        cyBottomHeight: -1,
+    };
 
     unsafe {
+        let _ = DwmExtendFrameIntoClientArea(hwnd, &margins);
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_USE_IMMERSIVE_DARK_MODE as u32,
+            &dark_mode as *const _ as *const core::ffi::c_void,
+            std::mem::size_of_val(&dark_mode) as u32,
+        );
         let _ = DwmSetWindowAttribute(
             hwnd,
             DWMWA_SYSTEMBACKDROP_TYPE as u32,
@@ -326,5 +434,152 @@ fn apply_platform_window_effects(window: &i_slint_backend_winit::winit::window::
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(all(
+    not(target_os = "linux"),
+    not(target_os = "macos"),
+    not(target_os = "windows")
+))]
 fn apply_platform_window_effects(_window: &i_slint_backend_winit::winit::window::Window) {}
+
+#[cfg(target_os = "linux")]
+unsafe fn apply_xlib_blur(display: *mut core::ffi::c_void, window: core::ffi::c_ulong) {
+    use core::ffi::{c_char, c_int, c_uchar, c_ulong};
+
+    #[link(name = "X11")]
+    unsafe extern "C" {
+        fn XInternAtom(
+            display: *mut core::ffi::c_void,
+            atom_name: *const c_char,
+            only_if_exists: c_int,
+        ) -> c_ulong;
+        fn XChangeProperty(
+            display: *mut core::ffi::c_void,
+            window: c_ulong,
+            property: c_ulong,
+            property_type: c_ulong,
+            format: c_int,
+            mode: c_int,
+            data: *const c_uchar,
+            nelements: c_int,
+        ) -> c_int;
+        fn XFlush(display: *mut core::ffi::c_void) -> c_int;
+    }
+
+    const PROP_MODE_REPLACE: c_int = 0;
+
+    let property = unsafe { XInternAtom(display, c"_KDE_NET_WM_BLUR_BEHIND_REGION".as_ptr(), 0) };
+    let cardinal = unsafe { XInternAtom(display, c"CARDINAL".as_ptr(), 0) };
+
+    if property == 0 || cardinal == 0 {
+        return;
+    }
+
+    unsafe {
+        XChangeProperty(
+            display,
+            window,
+            property,
+            cardinal,
+            32,
+            PROP_MODE_REPLACE,
+            core::ptr::null(),
+            0,
+        );
+        XFlush(display);
+    }
+}
+
+#[cfg(target_os = "linux")]
+unsafe fn apply_xcb_blur(connection: *mut core::ffi::c_void, window: u32) {
+    use core::ffi::{c_char, c_int, c_void};
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct XcbInternAtomCookie {
+        sequence: u32,
+    }
+
+    #[repr(C)]
+    struct XcbInternAtomReply {
+        response_type: u8,
+        pad0: u8,
+        sequence: u16,
+        length: u32,
+        atom: u32,
+    }
+
+    #[link(name = "xcb")]
+    unsafe extern "C" {
+        fn xcb_intern_atom(
+            connection: *mut c_void,
+            only_if_exists: u8,
+            name_len: u16,
+            name: *const c_char,
+        ) -> XcbInternAtomCookie;
+        fn xcb_intern_atom_reply(
+            connection: *mut c_void,
+            cookie: XcbInternAtomCookie,
+            error: *mut *mut c_void,
+        ) -> *mut XcbInternAtomReply;
+        fn xcb_change_property(
+            connection: *mut c_void,
+            mode: u8,
+            window: u32,
+            property: u32,
+            property_type: u32,
+            format: u8,
+            data_len: u32,
+            data: *const c_void,
+        );
+        fn xcb_flush(connection: *mut c_void) -> c_int;
+    }
+
+    unsafe extern "C" {
+        fn free(ptr: *mut c_void);
+    }
+
+    const PROP_MODE_REPLACE: u8 = 0;
+
+    unsafe fn intern_atom(connection: *mut c_void, name: &[u8]) -> u32 {
+        let cookie = unsafe {
+            xcb_intern_atom(
+                connection,
+                0,
+                name.len() as u16,
+                name.as_ptr() as *const c_char,
+            )
+        };
+        let reply = unsafe { xcb_intern_atom_reply(connection, cookie, core::ptr::null_mut()) };
+
+        if reply.is_null() {
+            return 0;
+        }
+
+        let atom = unsafe { (*reply).atom };
+        unsafe {
+            free(reply as *mut c_void);
+        }
+        atom
+    }
+
+    let property = unsafe { intern_atom(connection, b"_KDE_NET_WM_BLUR_BEHIND_REGION") };
+    let cardinal = unsafe { intern_atom(connection, b"CARDINAL") };
+
+    if property == 0 || cardinal == 0 {
+        return;
+    }
+
+    unsafe {
+        xcb_change_property(
+            connection,
+            PROP_MODE_REPLACE,
+            window,
+            property,
+            cardinal,
+            32,
+            0,
+            core::ptr::null(),
+        );
+        xcb_flush(connection);
+    }
+}
