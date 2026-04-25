@@ -1,4 +1,4 @@
-# Launchpad
+# Neopad
 
 A cross-platform app launcher and searcher prototype built with Rust and Slint.
 
